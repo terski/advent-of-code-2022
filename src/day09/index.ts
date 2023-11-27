@@ -4,85 +4,69 @@ const parseInput = (rawInput: string) => rawInput.split('\n');
 
 const part1 = (rawInput: string) => {
     const moves = parseInput(rawInput);
-    const delta: { [key: string]: [number, number] } = {
-        R: [0, 1],
-        L: [0, -1],
-        U: [-1, 0],
-        D: [1, 0],
-    };
-    const head = { row: 0, column: 0 };
-    const tail = { row: 0, column: 0 };
-    const locations = new Set([`${tail.row},${tail.column}`]);
+    const visits = tailVisits(moves, 2);
 
-    for (let move of moves) {
-        const [direction, distance] = move.split(' ');
-        const diff = delta[direction];
-        for (let i = 0; i < +distance; i++) {
-            const previous = { row: head.row, column: head.column };
-
-            head.row += diff[0];
-            head.column += diff[1];
-
-            if (
-                Math.abs(head.row - tail.row) > 1 ||
-                Math.abs(head.column - tail.column) > 1
-            ) {
-                tail.row = previous.row;
-                tail.column = previous.column;
-                locations.add(`${tail.row},${tail.column}`);
-            }
-        }
-    }
-
-    return locations.size.toString();
+    return visits.size.toString();
 };
-
-type Position = { row: number; column: number };
 
 const part2 = (rawInput: string) => {
     const moves = parseInput(rawInput);
-    const delta: { [key: string]: [number, number] } = {
-        R: [0, 1],
-        L: [0, -1],
-        U: [-1, 0],
-        D: [1, 0],
-    };
-    const rope = Array<Position>(10).fill({ row: 0, column: 0 }, 0, 10);
-    console.log(rope);
-    const locations = new Set([`${rope[9].row},${rope[9].column}`]);
+    const visits = tailVisits(moves, 10);
+
+    return visits.size.toString();
+};
+
+const tailVisits = (moves: string[], knotCount: number) => {
+    const rope = new Array<Position>(knotCount)
+        .fill([0, 0])
+        .map((x) => [...x] as Position);
+    const visited = new Set([rope[0].toString()]);
 
     for (let move of moves) {
         const [direction, distance] = move.split(' ');
-        const diff = delta[direction];
-        console.log(`Move`);
+        const diff = directions[direction];
         for (let i = 0; i < +distance; i++) {
             for (let j = 0; j < rope.length; j++) {
                 if (j === 0) {
-                    rope[j].row += diff[0];
-                    rope[j].column += diff[1];
+                    rope[j] = add(rope[j], diff);
                 } else {
-                    const vert = rope[j].row - rope[j - 1].row;
-                    if (Math.abs(vert) > 1) {
-                        rope[j].row += rope[j].row > rope[j - 1].row ? -1 : 1;
-                        console.log(
-                            `Moving rope[${j}]to ${rope[j].row}, ${rope[j].column}`,
-                        );
-                    }
-                    const horiz = rope[j].column - rope[j - 1].column;
-                    if (Math.abs(horiz) > 1) {
-                        rope[j].column +=
-                            rope[j].column > rope[j - 1].column ? -1 : 1;
-                            console.log(
-                                `Moving rope[${j}] to ${rope[j].row}, ${rope[j].column}`,
-                            );
-                    }
+                    rope[j] = follow(rope[j - 1], rope[j]);
                 }
             }
-            locations.add(`${rope[-1].row},${rope[-1].column}`);
+            visited.add(rope[rope.length - 1].toString());
         }
     }
 
-    return locations.size.toString();
+    return visited;
+};
+
+type Position = [number, number];
+
+const add = (a: Position, b: Position): Position => {
+    return [a[0] + b[0], a[1] + b[1]];
+};
+
+const subtract = (a: Position, b: Position): Position => {
+    return [a[0] - b[0], a[1] - b[1]];
+};
+
+const sign = (position: Position): Position => {
+    return [Math.sign(position[0]), Math.sign(position[1])];
+};
+
+const directions: { [key: string]: Position } = {
+    R: [0, 1],
+    L: [0, -1],
+    U: [-1, 0],
+    D: [1, 0],
+};
+
+const follow = (head: Position, tail: Position): Position => {
+    const diff = subtract(head, tail);
+    if (Math.max(...diff.map((x) => Math.abs(x))) > 1) {
+        return add(tail, sign(diff));
+    }
+    return [tail[0], tail[1]];
 };
 
 run({
@@ -121,5 +105,5 @@ run({
         solution: part2,
     },
     trimTestInputs: true,
-    onlyTests: true,
+    onlyTests: false,
 });
